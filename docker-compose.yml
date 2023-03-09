@@ -1,0 +1,73 @@
+version: "3"
+services:
+  mobile:
+    container_name: area-mobile
+    build:
+      context: ./mobile
+    volumes:
+      - apk:/apk_folder
+    tty: true
+
+  mongo:
+    container_name: area-mongo
+    build: ./mongo
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=api
+      - MONGO_INITDB_ROOT_PASSWORD=docker1234
+    expose:
+      - "27017"
+    networks:
+      - mongo-network
+
+  back:
+    container_name: area-back
+    build: ./back
+    restart: always
+    env_file:
+      - ./back/.env
+    expose:
+      - "8080"
+    networks:
+      - mongo-network
+      - nginx-network
+
+  front:
+    container_name: area-front
+    build: ./front
+    restart: always
+    depends_on:
+      - back
+      # - mobile
+    env_file:
+      - ./front/.env
+    volumes:
+      - ./front/public:/usr/app/public:ro
+      - apk:/apk_folder
+    expose:
+      - "8081"
+    networks:
+      - nginx-network
+
+  nginx:
+    container_name: area-nginx
+    image: nginx:1.23.3
+    restart: always
+    depends_on:
+      - back
+      - front
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+    ports:
+      - "80:80"
+    networks:
+      - nginx-network
+
+volumes:
+    apk:
+
+networks:
+  mongo-network:
+    driver: bridge
+  nginx-network:
+    driver: bridge
